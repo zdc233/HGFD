@@ -3,6 +3,7 @@ import shutil
 import requests
 import json
 import os
+import shutil
 import cv2
 import re
 import numpy as np
@@ -117,6 +118,21 @@ class CannyDetector:
         color_mask = cv2.bitwise_or(white_mask, yellow_mask)
         return color_mask
 
+def clear_folder(folder_path):
+    if not os.path.isdir(folder_path):
+        print(f"路径不存在或不是文件夹: {folder_path}")
+        return
+
+    for filename in os.listdir(folder_path):
+        file_path = os.path.join(folder_path, filename)
+        try:
+            if os.path.isfile(file_path) or os.path.islink(file_path):
+                os.unlink(file_path)  # 删除文件或符号链接
+            elif os.path.isdir(file_path):
+                shutil.rmtree(file_path)  # 删除子文件夹
+        except Exception as e:
+            print(f"删除失败: {file_path} -> {e}")
+
 # 主函数
 def main(label, seed, json_file_path, original_image_filename, canny_image_filename, positive_prompt, negative_prompt,output_image_name):
     # 加载 JSON 文件
@@ -150,16 +166,19 @@ if __name__ == "__main__":
     high_threshold = 200 
     
     # 定义图片和标注文件的根目录
-    image_root = "./datasets/CULane_6x5k/normal"
-    canny_root = "./datasets/CULane_6x5k/canny"
-    annotator_root = "./datasets/CULane_6x5k/annotator"
+    data_root = './data/HGLane'
+    image_root = f"{data_root}/normal"
+    canny_root = f"{data_root}/canny"
+    annotator_root = f"{data_root}/normal"
     labels = ['snow','rain','fog','night','dusk'] 
-    # labels = ['night']
 
     # 获取图片路径列表
     image_list = []
     canny_list = []
     annotator_file_list = []
+    
+    clear_folder('../input')
+    clear_folder('../output')
 
     # 遍历图片根目录
     for root, dirs, files in os.walk(image_root):
@@ -183,10 +202,10 @@ if __name__ == "__main__":
     canny_list = sorted(canny_list, key=lambda x: int(re.search(r'normal_(\d+)_canny\.png', x).group(1)))
     annotator_file_list = sorted(annotator_file_list,key=lambda x: int(re.search(r'normal_(\d+)\.lines\.txt', x).group(1)))
 
-    # 测试用
-    # image_list = image_list[:3]
-    # canny_list = canny_list[:3]
-    # annotator_file_list = annotator_file_list[:3]
+    
+    image_list = image_list[:1]
+    canny_list = canny_list[:1]
+    annotator_file_list = annotator_file_list[:1]
     
     apply_canny = CannyDetector()
     
@@ -232,7 +251,7 @@ if __name__ == "__main__":
                 json_file_path = json_file_path_canny
             else:
                 raise ValueError(f"Unknown label: {label}")
-            target_path = f"./datasets/CULane_6x5k/{label}"
+            target_path = f"{data_root}/{label}"
             # 检查路径是否存在
             if not os.path.exists(target_path):
                 os.makedirs(target_path)
